@@ -78,6 +78,10 @@ export default function MuridDashboard({ user, onLogout }) {
       if (e.classId !== user.classId) return false;
       if (e.isMakeup) {
         return e.allowedStudents && e.allowedStudents.includes(user.username);
+      } else {
+        if (e.excludedStudents && e.excludedStudents.includes(user.username)) {
+          return false;
+        }
       }
       return true;
     });

@@ -7,10 +7,46 @@ export default function LoginView({ onLoginSuccess }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [pendingForceLoginUser, setPendingForceLoginUser] = useState(null);
+
+  const processLogin = async (user, force = false) => {
+    const logs = await db.get("loginLogs");
+    const existingLogIdx = logs.findIndex((l) => l.username === user.username);
+
+    if (!force && user.role === "murid" && existingLogIdx > -1 && logs[existingLogIdx].isOnline) {
+      setPendingForceLoginUser(user);
+      setError("Akun ini terdeteksi sedang aktif/login di perangkat lain. Apakah Anda ingin memaksa masuk dan mengeluarkan perangkat lama?");
+      return;
+    }
+    
+    const newLog = {
+      username: user.username,
+      nama: user.nama,
+      role: user.role,
+      loginTime: new Date().toLocaleTimeString(),
+      isOnline: true,
+    };
+
+    if (existingLogIdx > -1) {
+      logs[existingLogIdx] = newLog;
+    } else {
+      logs.push(newLog);
+    }
+    
+    await db.save("loginLogs", newLog);
+    db.notify("LOGIN_CHANGE", { username: user.username, status: "online" });
+    
+    if (force) {
+      db.notify("FORCE_LOGOUT", { username: user.username });
+    }
+    
+    onLoginSuccess(user);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setPendingForceLoginUser(null);
 
     if (!username.trim() || !password.trim()) {
       setError("Username dan password tidak boleh kosong.");
@@ -23,35 +59,15 @@ export default function LoginView({ onLoginSuccess }) {
     );
 
     if (user) {
-      // Check if murid is already logged in on another device
-      const logs = await db.get("loginLogs");
-      const existingLogIdx = logs.findIndex((l) => l.username === user.username);
-
-      if (user.role === "murid" && existingLogIdx > -1 && logs[existingLogIdx].isOnline) {
-        setError("Akun ini sudah login di perangkat lain. Silakan logout dari perangkat sebelumnya terlebih dahulu, atau hubungi Guru/Admin.");
-        return;
-      }
-      
-      const newLog = {
-        username: user.username,
-        nama: user.nama,
-        role: user.role,
-        loginTime: new Date().toLocaleTimeString(),
-        isOnline: true,
-      };
-
-      if (existingLogIdx > -1) {
-        logs[existingLogIdx] = newLog;
-      } else {
-        logs.push(newLog);
-      }
-      
-      await db.save("loginLogs", newLog);
-      db.notify("LOGIN_CHANGE", { username: user.username, status: "online" });
-      
-      onLoginSuccess(user);
+      await processLogin(user, false);
     } else {
       setError("Username atau password salah.");
+    }
+  };
+
+  const handleForceLogin = async () => {
+    if (pendingForceLoginUser) {
+      await processLogin(pendingForceLoginUser, true);
     }
   };
 
@@ -73,14 +89,39 @@ export default function LoginView({ onLoginSuccess }) {
               backgroundColor: "rgba(239, 68, 68, 0.15)",
               border: "1px solid var(--color-danger)",
               color: "var(--color-danger)",
-              padding: "12px",
+              padding: "16px",
               borderRadius: "var(--radius-md)",
               fontSize: "13px",
               marginBottom: "20px",
               fontWeight: "500",
+              lineHeight: "1.5"
             }}
           >
             {error}
+            
+            {pendingForceLoginUser && (
+              <div style={{ marginTop: "16px", display: "flex", gap: "8px" }}>
+                <button 
+                  type="button" 
+                  className="btn btn-danger" 
+                  style={{ flex: 1, padding: "8px" }}
+                  onClick={handleForceLogin}
+                >
+                  Paksa Masuk Sekarang
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  style={{ flex: 1, padding: "8px" }}
+                  onClick={() => {
+                    setError("");
+                    setPendingForceLoginUser(null);
+                  }}
+                >
+                  Batal
+                </button>
+              </div>
+            )}
           </div>
         )}
 

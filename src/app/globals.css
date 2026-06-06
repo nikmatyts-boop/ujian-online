@@ -474,18 +474,30 @@ body {
     border-right: none;
     border-bottom: 1px solid var(--card-border);
     padding: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: rgba(19, 26, 44, 0.95);
+    backdrop-filter: blur(10px);
   }
   .sidebar-logo {
     margin-bottom: 16px;
+    font-size: 18px;
   }
   .sidebar-menu {
     flex-direction: row;
     overflow-x: auto;
     padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Hide scrollbar for cleaner look */
+  }
+  .sidebar-menu::-webkit-scrollbar {
+    display: none;
   }
   .sidebar-item {
     white-space: nowrap;
     padding: 8px 12px;
+    font-size: 13px;
   }
   .sidebar-footer {
     display: flex;
@@ -494,16 +506,64 @@ body {
     border-top: 1px solid var(--card-border);
     padding-top: 12px;
     margin-top: 8px;
+    flex-wrap: wrap;
+    gap: 12px;
   }
   .sidebar-footer > div {
     margin-bottom: 0 !important;
   }
   .sidebar-footer > button {
-    width: auto !important;
-    padding: 6px 16px !important;
+    width: 100% !important;
+    padding: 8px 16px !important;
+    justify-content: center;
   }
   .main-content {
     padding: 16px;
+  }
+  .glass-card {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .header-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .user-profile-badge {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  .page-title h1 {
+    font-size: 22px;
+  }
+  .form-control {
+    padding: 10px 14px;
+  }
+  /* Login Screen Adjustments */
+  .login-card {
+    padding: 24px 20px;
+  }
+  .login-card h1 {
+    font-size: 24px !important;
+  }
+  /* Custom table scroll hint */
+  .table-responsive {
+    position: relative;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--card-border);
+  }
+  .custom-table th, .custom-table td {
+    padding: 12px;
+    white-space: nowrap;
   }
 }
 

@@ -24,6 +24,7 @@ export default function GuruDashboard({ user, onLogout }) {
   const [examRandom, setExamRandom] = useState(false);
   const [examIsMakeup, setExamIsMakeup] = useState(false);
   const [examAllowedStudents, setExamAllowedStudents] = useState([]);
+  const [examExcludedStudents, setExamExcludedStudents] = useState([]);
   const [questions, setQuestions] = useState([
     { text: "", options: ["", "", "", ""], answer: 0 }
   ]);
@@ -41,6 +42,7 @@ export default function GuruDashboard({ user, onLogout }) {
   const [editRandom, setEditRandom] = useState(false);
   const [editIsMakeup, setEditIsMakeup] = useState(false);
   const [editAllowedStudents, setEditAllowedStudents] = useState([]);
+  const [editExcludedStudents, setEditExcludedStudents] = useState([]);
   const [editQuestions, setEditQuestions] = useState([]);
 
   // Filters for results
@@ -173,6 +175,7 @@ export default function GuruDashboard({ user, onLogout }) {
       randomize: examRandom,
       isMakeup: examIsMakeup,
       allowedStudents: examIsMakeup ? examAllowedStudents : [],
+      excludedStudents: !examIsMakeup ? examExcludedStudents : [],
       scheduledStart: startDtStr,
       scheduledEnd: endDtStr,
       teacherId: user.id,
@@ -197,6 +200,7 @@ export default function GuruDashboard({ user, onLogout }) {
     setExamRandom(false);
     setExamIsMakeup(false);
     setExamAllowedStudents([]);
+    setExamExcludedStudents([]);
     setQuestions([{ text: "", options: ["", "", "", ""], answer: 0 }]);
 
     showMsg(`Ujian "${newExam.title}" berhasil dibuat!`);
@@ -244,12 +248,12 @@ export default function GuruDashboard({ user, onLogout }) {
     if (ex.scheduledEnd) {
       const { time } = parseLocal(ex.scheduledEnd);
       setEditEndTime(time);
-    setEditEndTime(time);
     }
     
     setEditRandom(ex.randomize);
     setEditIsMakeup(ex.isMakeup || false);
     setEditAllowedStudents(ex.allowedStudents || []);
+    setEditExcludedStudents(ex.excludedStudents || []);
     setEditQuestions(ex.questions.map(q => ({
       id: q.id,
       text: q.text,
@@ -325,6 +329,7 @@ export default function GuruDashboard({ user, onLogout }) {
           randomize: editRandom,
           isMakeup: editIsMakeup,
           allowedStudents: editIsMakeup ? editAllowedStudents : [],
+          excludedStudents: !editIsMakeup ? editExcludedStudents : [],
           scheduledStart: startDtStr,
           scheduledEnd: endDtStr,
           questions: editQuestions.map(q => ({
@@ -738,6 +743,39 @@ export default function GuruDashboard({ user, onLogout }) {
                 </div>
               )}
 
+              {!examIsMakeup && (
+                <div className="glass-card" style={{ marginBottom: "24px", backgroundColor: "rgba(239, 68, 68, 0.05)", border: "1px solid #ef4444" }}>
+                  <h4 style={{ color: "#ef4444", marginBottom: "16px" }}>🚫 Pengecualian Murid (Opsional)</h4>
+                  <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "16px" }}>Pilih murid yang <strong>TIDAK DIIZINKAN</strong> mengikuti ujian reguler ini.</p>
+                  {examSubject ? (() => {
+                    const sub = subjects.find(s => s.id === examSubject);
+                    const classUsers = users.filter(u => u.role === "murid" && u.classId === sub?.classId);
+                    if (classUsers.length === 0) return <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Tidak ada murid di kelas ini.</p>;
+                    
+                    return (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "10px", maxHeight: "200px", overflowY: "auto" }}>
+                        {classUsers.map(student => (
+                          <label key={student.username} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", padding: "4px" }}>
+                            <input
+                              type="checkbox"
+                              checked={examExcludedStudents.includes(student.username)}
+                              onChange={e => {
+                                if (e.target.checked) {
+                                  setExamExcludedStudents([...examExcludedStudents, student.username]);
+                                } else {
+                                  setExamExcludedStudents(examExcludedStudents.filter(id => id !== student.username));
+                                }
+                              }}
+                            />
+                            {student.nama} ({student.username})
+                          </label>
+                        ))}
+                      </div>
+                    );
+                  })() : <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Pilih Mata Pelajaran terlebih dahulu untuk memunculkan daftar murid.</p>}
+                </div>
+              )}
+
               <div style={{ borderTop: "1px solid var(--card-border)", paddingTop: "24px", marginTop: "24px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
                   <h4>Daftar Soal Ujian</h4>
@@ -855,7 +893,7 @@ export default function GuruDashboard({ user, onLogout }) {
                         if (exam.isMakeup) {
                           eligibleStudentsCount = users.filter(u => u.role === "murid" && exam.allowedStudents?.includes(u.username)).length;
                         } else {
-                          eligibleStudentsCount = users.filter(u => u.role === "murid" && u.classId === exam.classId).length;
+                          eligibleStudentsCount = users.filter(u => u.role === "murid" && u.classId === exam.classId && !(exam.excludedStudents || []).includes(u.username)).length;
                         }
 
                         return (
@@ -996,7 +1034,7 @@ export default function GuruDashboard({ user, onLogout }) {
                         if (exam.isMakeup) {
                           eligibleStudents = users.filter(u => u.role === "murid" && exam.allowedStudents?.includes(u.username));
                         } else {
-                          eligibleStudents = users.filter(u => u.role === "murid" && u.classId === exam.classId);
+                          eligibleStudents = users.filter(u => u.role === "murid" && u.classId === exam.classId && !(exam.excludedStudents || []).includes(u.username));
                         }
 
                         const studentsData = eligibleStudents.map(student => {
@@ -1418,6 +1456,39 @@ export default function GuruDashboard({ user, onLogout }) {
                                   setEditAllowedStudents([...editAllowedStudents, student.username]);
                                 } else {
                                   setEditAllowedStudents(editAllowedStudents.filter(id => id !== student.username));
+                                }
+                              }}
+                            />
+                            {student.nama} ({student.username})
+                          </label>
+                        ))}
+                      </div>
+                    );
+                  })() : <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Pilih Mata Pelajaran terlebih dahulu untuk memunculkan daftar murid.</p>}
+                </div>
+              )}
+
+              {!editIsMakeup && (
+                <div className="glass-card" style={{ marginBottom: "24px", backgroundColor: "rgba(239, 68, 68, 0.05)", border: "1px solid #ef4444" }}>
+                  <h4 style={{ color: "#ef4444", marginBottom: "16px" }}>🚫 Pengecualian Murid (Opsional)</h4>
+                  <p style={{ fontSize: "13px", color: "var(--text-secondary)", marginBottom: "16px" }}>Pilih murid yang <strong>TIDAK DIIZINKAN</strong> mengikuti ujian reguler ini.</p>
+                  {editSubjectId ? (() => {
+                    const sub = subjects.find(s => s.id === editSubjectId);
+                    const classUsers = users.filter(u => u.role === "murid" && u.classId === sub?.classId);
+                    if (classUsers.length === 0) return <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Tidak ada murid di kelas ini.</p>;
+                    
+                    return (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "10px", maxHeight: "200px", overflowY: "auto" }}>
+                        {classUsers.map(student => (
+                          <label key={student.username} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", cursor: "pointer", padding: "4px" }}>
+                            <input
+                              type="checkbox"
+                              checked={editExcludedStudents.includes(student.username)}
+                              onChange={e => {
+                                if (e.target.checked) {
+                                  setEditExcludedStudents([...editExcludedStudents, student.username]);
+                                } else {
+                                  setEditExcludedStudents(editExcludedStudents.filter(id => id !== student.username));
                                 }
                               }}
                             />
